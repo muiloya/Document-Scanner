@@ -10,19 +10,17 @@ def process_pipeline(image_path):
     ## could be any smoothing filter
     img_smooth = cv2.GaussianBlur(image_gray_scale, (5, 5), 0)
 
-    kernel = np.array([[0, -1, 0],
-                    [-1, 5, -1],
+    sharpening_kernel = np.array([[0, -1, 0],
+                    [-1, 4, -1],
                     [0, -1, 0]])
 
     # Apply the sharpening filter
-    sharpened_image = cv2.filter2D(img_smooth, -1, kernel)
+    sharpened_image = cv2.filter2D(img_smooth, -1, sharpening_kernel)
 
     ## edge detection
-    sobel_image = cv2.Sobel(img, cv2.CV_64F, 1, 1, 5)
+    edges = cv2.Canny(sharpened_image, 50, 150, apertureSize=3) 
 
     ##Hough Transform
-    # Hough Transform to detect lines
-    edges = cv2.Canny(sharpened_image, 50, 150, apertureSize=3) 
     lines = cv2.HoughLines (edges, 1, np.pi / 180, 200)
     
     # Calculate angles of the lines
@@ -43,10 +41,7 @@ def process_pipeline(image_path):
     (h, w) = img.shape[:2]
     center= (w // 2, h // 2)
     M = cv2.getRotationMatrix2D(center, skew_angle, 1.0)
-    corrected_image = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-    cv2.imshow("Processed Image", corrected_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    corrected_image = cv2.warpAffine(image_gray_scale, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
     ## histogram
     equalized_img = cv2.equalizeHist(img)
@@ -55,6 +50,7 @@ def process_pipeline(image_path):
     ret, thresh_img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
 
     ## morphological operations
-    dilated_image = cv2.dilate(thresh_image, kernel, iterations=1)
+
+    dilated_image = cv2.dilate(thresh_img, kernel, iterations=1)
 
     return processed_img
