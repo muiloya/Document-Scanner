@@ -1,8 +1,13 @@
 import cv2
 
-def process_pipeline(img):
-    image_gray_scale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+def process_pipeline(image_path):
+    
+    img = cv2.imread(image_path)
 
+    image_gray_scale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    cv2.imshow("Processed Image", image_gray_scale)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     ## could be any smoothing filter
     img_smooth = cv2.GaussianBlur(img, (5, 5), 0)
 
