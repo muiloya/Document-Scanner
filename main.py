@@ -1,5 +1,5 @@
 import os
-from algorithms import process_pipeline
+from algorithms import process_pipeline, display_images
 
 def get_image_files(directory):
     supported_formats = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
@@ -45,7 +45,9 @@ def main():
             chosen_image = choose_image(images)
             image_path = os.path.join(app_directory, chosen_image)
         
-        process_pipeline(image_path)
+        images , titles = process_pipeline(image_path)
+        
+        display_images(images, titles)
 
 if __name__ == "__main__":
-    main()
+    main() 

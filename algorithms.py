@@ -1,56 +1,77 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 def process_pipeline(image_path):
-    
+    results=[]
+    titles=[]
+
+    #Original
     img = cv2.imread(image_path)
+    results.append(img)
+    titles.append("Original")
 
+    # Grayscale
     image_gray_scale = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    results.append(image_gray_scale)
+    titles.append("Grayscale")
 
-    ## could be any smoothing filter
-    img_smooth = cv2.GaussianBlur(image_gray_scale, (5, 5), 0)
+    # Smoothing
+    img_smooth = cv2.GaussianBlur(image_gray_scale, (3, 3), 0)
+    results.append(img_smooth)
+    titles.append("Smoothed")
 
-    sharpening_kernel = np.array([[0, -1, 0],
-                    [-1, 4, -1],
-                    [0, -1, 0]])
+    # Edge Detection
+    edges = cv2.Canny(img_smooth, 50, 150, apertureSize=3)
+    results.append(edges)
+    titles.append("Edges")
 
-    # Apply the sharpening filter
-    sharpened_image = cv2.filter2D(img_smooth, -1, sharpening_kernel)
-
-    ## edge detection
-    edges = cv2.Canny(sharpened_image, 50, 150, apertureSize=3) 
-
-    ##Hough Transform
-    lines = cv2.HoughLines (edges, 1, np.pi / 180, 200)
-    
-    # Calculate angles of the lines
-    angles = []
-    for line in lines:
-        rho, theta = line[0]
-        angle = np.degrees (theta) - 90
-        angles.append(angle)
-    # Find the most common angle (mode) and adjust to the closest 90 degree angle
-    mode_angle = np.median (angles)
-    if mode_angle > 45:
-        skew_angle = mode_angle - 90
-    elif mode_angle < -45:
-        skew_angle = mode_angle + 90
-    else:
-        skew_angle = mode_angle
-    # Rotate the image to correct the skew
+    # Hough Transform
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
+    angles = [np.degrees(line[0][1]) - 90 for line in lines]
+    mode_angle = np.median(angles)
+    skew_angle = mode_angle - 90 if mode_angle > 45 else (mode_angle + 90 if mode_angle < -45 else mode_angle)
     (h, w) = img.shape[:2]
-    center= (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, skew_angle, 1.0)
-    corrected_image = cv2.warpAffine(image_gray_scale, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    M = cv2.getRotationMatrix2D((w // 2, h // 2), skew_angle, 1.0)
+    corrected_image = cv2.warpAffine(img_smooth, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    results.append(corrected_image)
+    titles.append("Skew Correction")
 
-    ## histogram
-    equalized_img = cv2.equalizeHist(img)
+    # Sharpening
+    sharpening_kernel = np.array([[0, 1, 0],
+                                  [1, -4, 1],
+                                  [0, 1, 0]])
+    sharpened_image = cv2.filter2D(corrected_image, -1, sharpening_kernel)
+    sharpened_image=cv2.addWeighted(corrected_image, 1.0, sharpened_image, 1.0, 0)
+    results.append(sharpened_image)
+    titles.append("Sharpened")
 
-    ## binarizing
-    ret, thresh_img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+    # Histogram Equalization
+    #equalized_img = cv2.equalizeHist(corrected_image)
 
-    ## morphological operations
+    # Binarization
+    _, thresh_img = cv2.threshold(sharpened_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    results.append(thresh_img)
+    titles.append("Binarization")
 
+    # Morphological Operations
+    kernel = np.ones((3, 3), np.uint8)
     dilated_image = cv2.dilate(thresh_img, kernel, iterations=1)
+    results.append(dilated_image)
+    titles.append("Morphological Operations")
 
-    return processed_img
+    # Returning all processed images
+    return results , titles
+
+def display_images(images, titles):
+    n = len(images)
+    plt.figure(figsize=(20, 10))
+
+    for i in range(n):
+        plt.subplot(2, (n + 1) // 2, i + 1)
+        plt.imshow(images[i], cmap='gray')
+        plt.title(titles[i])
+        plt.axis('off')
+
+    plt.tight_layout()
+    plt.show()
