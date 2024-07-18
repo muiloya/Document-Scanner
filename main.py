@@ -35,6 +35,12 @@ def get_user_image_path():
         else:
             print("Invalid image path or unsupported file format. Please try again.")
 
+def user_exit():
+    close = input("Press enter to continue, or press 'x' and hit enter to exit ")
+    return close != ""
+
+        
+
 def main():
     while True:
         app_directory = os.getcwd()
@@ -48,6 +54,9 @@ def main():
         images , titles = process_pipeline(image_path)
         
         display_images(images, titles)
+        
+        if user_exit():
+            break
 
 if __name__ == "__main__":
     main() 
