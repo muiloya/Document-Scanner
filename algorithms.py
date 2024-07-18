@@ -2,6 +2,18 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0, amount=1.0, threshold=0):
+    """Return a sharpened version of the image, using an unsharp mask."""
+    blurred = cv2.GaussianBlur(image, kernel_size, sigma)
+    sharpened = float(amount + 1) * image - float(amount) * blurred
+    sharpened = np.maximum(sharpened, np.zeros(sharpened.shape))
+    sharpened = np.minimum(sharpened, 255 * np.ones(sharpened.shape))
+    sharpened = sharpened.round().astype(np.uint8)
+    if threshold > 0:
+        low_contrast_mask = np.absolute(image - blurred) < threshold
+        np.copyto(sharpened, image, where=low_contrast_mask)
+    return sharpened
+
 def process_pipeline(image_path):
     results=[]
     titles=[]
@@ -16,10 +28,10 @@ def process_pipeline(image_path):
     results.append(image_gray_scale)
     titles.append("Grayscale")
 
-    # Smoothing
-    img_smooth = cv2.GaussianBlur(image_gray_scale, (3, 3), 0)
+    # Unsharp Masking
+    img_smooth = unsharp_mask(image_gray_scale)
     results.append(img_smooth)
-    titles.append("Smoothed")
+    titles.append("Unsharp Masked")
 
     # Edge Detection
     edges = cv2.Canny(img_smooth, 50, 150, apertureSize=3)
@@ -37,20 +49,11 @@ def process_pipeline(image_path):
     results.append(corrected_image)
     titles.append("Skew Correction")
 
-    # Sharpening
-    sharpening_kernel = np.array([[0, 1, 0],
-                                  [1, -4, 1],
-                                  [0, 1, 0]])
-    sharpened_image = cv2.filter2D(corrected_image, -1, sharpening_kernel)
-    sharpened_image=cv2.addWeighted(corrected_image, 1.0, sharpened_image, 1.0, 0)
-    results.append(sharpened_image)
-    titles.append("Sharpened")
-
     # Histogram Equalization
     #equalized_img = cv2.equalizeHist(corrected_image)
 
     # Binarization
-    _, thresh_img = cv2.threshold(sharpened_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    _, thresh_img = cv2.threshold(corrected_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     results.append(thresh_img)
     titles.append("Binarization")
 
