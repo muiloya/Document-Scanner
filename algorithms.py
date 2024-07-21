@@ -49,18 +49,21 @@ def process_pipeline(image_path):
     results.append(corrected_image)
     titles.append("Skew Correction")
 
-    # Histogram Equalization
-    #equalized_img = cv2.equalizeHist(corrected_image)
+    #Histogram Equalization
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    equalized_img = clahe.apply(corrected_image)
+    results.append(equalized_img)
+    titles.append("Histogram Equalization")
 
     # Binarization
-    _, thresh_img = cv2.threshold(corrected_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    _, thresh_img = cv2.threshold(equalized_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     results.append(thresh_img)
     titles.append("Binarization")
 
     # Morphological Operations
-    kernel = np.ones((3, 3), np.uint8)
-    dilated_image = cv2.dilate(thresh_img, kernel, iterations=1)
-    results.append(dilated_image)
+    kernel = cv2.getStructuringElement(cv2.MORPH_CROSS,(3,3))
+    opened_image = cv2.morphologyEx(thresh_img, cv2.MORPH_OPEN, kernel)
+    results.append(opened_image)
     titles.append("Morphological Operations")
 
     # Returning all processed images
@@ -68,11 +71,14 @@ def process_pipeline(image_path):
 
 def display_images(images, titles):
     n = len(images)
-    plt.figure(figsize=(20, 10))
+    plt.figure(figsize=(30, 10))
 
     for i in range(n):
         plt.subplot(2, (n + 1) // 2, i + 1)
-        plt.imshow(images[i], cmap='gray')
+        if len(images[i].shape) == 2:  # Grayscale image
+            plt.imshow(images[i], cmap='gray')
+        else:  # Color image
+            plt.imshow(cv2.cvtColor(images[i], cv2.COLOR_BGR2RGB))
         plt.title(titles[i])
         plt.axis('off')
 
